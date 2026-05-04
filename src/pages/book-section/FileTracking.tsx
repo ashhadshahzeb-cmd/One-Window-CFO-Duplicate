@@ -478,6 +478,7 @@ export default function FileTracking() {
 
   const [isPrintingQR, setIsPrintingQR] = useState(false);
   const [isPrintingQRMinimal, setIsPrintingQRMinimal] = useState(false);
+  const [isPrintingCovering, setIsPrintingCovering] = useState(false);
 
   const handlePrintQR = () => {
     setIsPrintingQR(true);
@@ -697,7 +698,11 @@ export default function FileTracking() {
   };
 
   const handlePrint = () => {
-    window.print();
+    setIsPrintingCovering(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrintingCovering(false);
+    }, 250);
   };
 
   const sections = [
@@ -2145,77 +2150,36 @@ export default function FileTracking() {
       </Tabs>
 
       <style>{`
-        @media print {
-          /* Hide everything by default using visibility */
-          body { visibility: hidden !important; }
-          
-          /* Only show the ticket and its descendants */
-          .print-only, .print-only * { visibility: visible !important; }
-          
-          /* Force layout for the printable area */
-          .print-only { 
-            visibility: visible !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-            display: block !important;
-            transform: none !important;
-            box-shadow: none !important;
-            color: black !important;
+        ${isPrintingQR ? `
+          @media print {
+            body * { 
+              visibility: visible !important; 
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            .no-print { display: none !important; }
+            @page { size: auto; margin: 0; }
           }
-
-          /* Reset text colors for print specifically to ensure contrast */
-          .print-only p, .print-only span, .print-only div { color: black !important; }
-          .print-only .text-primary { color: #0ea5e9 !important; }
-          .print-only .bg-zinc-900, .print-only .bg-zinc-950, .print-only .bg-slate-50 { background: white !important; }
-
-          /* Ensure all background colors and images are printed */
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          
-          @page { margin: 0; size: A5 portrait; }
-        }
-
-        @media print {
-          body.thermal-mode { visibility: hidden !important; background: white !important; }
-          body.thermal-mode .thermal-only { visibility: visible !important; display: flex !important; }
-          body.thermal-mode .thermal-only * { visibility: visible !important; }
-          
-          .thermal-only {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 50mm !important;
-            height: 12mm !important;
-            display: none;
-            flex-direction: row !important;
-            align-items: center !important;
-            justify-content: flex-start !important;
-            background: white !important;
-            margin: 0 !important;
-            padding: 1mm !important;
-            border: 1px solid black !important;
+        ` : ''}
+        ${isPrintingCovering ? `
+          @media print {
+            @page { size: A5 portrait; margin: 0; }
           }
-          
-          @page { size: 50mm 12mm; margin: 0; }
+        ` : ''}
+        
+        @media screen {
+          /* Dashboard Dark Theme Overrides for Ticket Modal */
+          [data-radix-portal] .bg-zinc-950, [data-radix-portal] .bg-slate-50 { background-color: #09090b !important; }
+          [data-radix-portal] .bg-white { background-color: #18181b !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+          [data-radix-portal] .text-zinc-800, [data-radix-portal] .text-zinc-400 { color: #f4f4f5 !important; }
+          [data-radix-portal] .bg-slate-50.rounded-2xl { background-color: #27272a !important; border: 1px solid rgba(255,255,255,0.05) !important; }
+          [data-radix-portal] .border-zinc-100 { border-color: rgba(255,255,255,0.05) !important; }
         }
-        
-        .thermal-only { display: none; }
-        
-        /* Dashboard Dark Theme Overrides for Ticket Modal */
-        [data-radix-portal] .bg-zinc-950, [data-radix-portal] .bg-slate-50 { background-color: #09090b !important; }
-        [data-radix-portal] .bg-white { background-color: #18181b !important; border: 1px solid rgba(255,255,255,0.1) !important; }
-        [data-radix-portal] .text-zinc-800, [data-radix-portal] .text-zinc-400 { color: #f4f4f5 !important; }
-        [data-radix-portal] .bg-slate-50.rounded-2xl { background-color: #27272a !important; border: 1px solid rgba(255,255,255,0.05) !important; }
-        [data-radix-portal] .border-zinc-100 { border-color: rgba(255,255,255,0.05) !important; }
       `}</style>
 
       {/* Hidden Printable Covering Page */}
-      <div className={`print-only hidden ${isPrintingQR ? '' : 'no-print'}`}>
+      <div className={`print-only hidden ${isPrintingCovering ? '' : 'no-print'}`}>
         <div ref={printRef} className="p-6 font-sans text-black bg-white min-h-[210mm] w-[148mm] mx-auto relative overflow-hidden">
           {/* Header */}
           <div className="text-center border-b-2 border-black pb-4 mb-4 flex justify-between items-end">
@@ -2307,9 +2271,10 @@ export default function FileTracking() {
           </div>
         </div>
       </div>
+
       {/* Full Screen Ticket & QR Modal (Matches Public Tracking Layout) */}
       <Dialog open={!!qrFullScreen} onOpenChange={(open) => !open && setQrFullScreen(null)}>
-        <DialogContent className={`sm:max-w-[450px] p-0 overflow-hidden rounded-[40px] border-none bg-zinc-950 shadow-2xl ${isPrintingQR ? 'print-only !fixed !inset-0 !m-0 !max-w-none !h-screen !w-screen !rounded-none !bg-white !shadow-none !translate-x-0 !translate-y-0 !top-0 !left-0 z-[9999]' : ''}`} style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-[40px] border-none bg-zinc-950 shadow-2xl">
           {(() => {
             const ticket = qrFullScreen ? records.find(r => r.cfo_diary_number === qrFullScreen.diary || r.receiving_number === qrFullScreen.receiving) : null;
             return (
@@ -2387,17 +2352,10 @@ export default function FileTracking() {
 
                         <div className="pt-2 flex flex-col gap-2 justify-center">
                           <Button
-                            className={`w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl ${isPrintingQR || isPrintingQRMinimal ? 'hidden' : ''}`}
+                            className={`w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl no-print`}
                             onClick={handlePrintQR}
                           >
                             <Printer className="w-4 h-4 mr-2" /> Print Tracking Slip
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className={`w-full border-primary/20 text-primary hover:bg-primary/10 font-bold rounded-xl ${isPrintingQR || isPrintingQRMinimal ? 'hidden' : ''}`}
-                            onClick={handlePrintQRMinimal}
-                          >
-                            <Printer className="w-4 h-4 mr-2" /> Print QR Only (Thermal)
                           </Button>
                         </div>
                       </CardContent>
@@ -2408,13 +2366,13 @@ export default function FileTracking() {
                   <div className="thermal-only">
                     <div style={{ marginRight: '2mm' }}>
                       <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrFullScreen?.diary}/${qrFullScreen?.receiving}`)}&color=000000`}
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrFullScreen?.diary}/${qrFullScreen?.receiving}`)}&color=000000&margin=0`}
                         alt="Thermal QR"
-                        style={{ width: '10mm', height: '10mm' }}
+                        style={{ width: '11mm', height: '11mm' }}
                       />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden' }}>
-                      <p style={{ fontSize: '7pt', fontWeight: '900', margin: '0', color: 'black', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: '10pt', fontWeight: '900', margin: '0', color: 'black', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                         D: {qrFullScreen?.diary}
                       </p>
                     </div>
