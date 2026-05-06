@@ -116,6 +116,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const mainRef = useRef<HTMLDivElement>(null);
 
   const isCFORole = userRole === 'cfo' || userRole === 'admin' || userRole === 'sub_cfo' || userRole?.startsWith('sub_cfo_') || isAdmin;
+  const isRestrictedAsstCFO = userRole?.startsWith('sub_cfo_') && userRole !== 'sub_cfo';
 
   const [showSplash, setShowSplash] = useState(() => {
     if (!isCFORole) return false;
@@ -127,14 +128,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const topNavItems = [
-    { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/book-section/file-tracking", icon: Shield, label: "File Tracking" },
-    { to: "/restricted", icon: Lock, label: "Restrict Dashboard" },
-    { to: "/collection-entry", icon: Plus, label: "Collection Entry" },
-  ];
+    { to: "/", icon: LayoutDashboard, label: "Dashboard", visible: !isRestrictedAsstCFO },
+    { to: "/book-section/file-tracking", icon: Shield, label: "File Tracking", visible: true },
+    { to: "/restricted", icon: Lock, label: "Restrict Dashboard", visible: !isRestrictedAsstCFO },
+    { to: "/collection-entry", icon: Plus, label: "Collection Entry", visible: !isRestrictedAsstCFO },
+  ].filter(item => item.visible);
 
   // Filter categories based on user role
-  const categories = (userRole || isAdmin) ? [
+  const categories = (userRole || isAdmin) && !isRestrictedAsstCFO ? [
     {
       id: "book-section",
       label: "Sections Management",

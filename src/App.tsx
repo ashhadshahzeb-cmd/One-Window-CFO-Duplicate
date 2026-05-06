@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { VoiceProvider } from "@/contexts/VoiceContext";
 import Layout from "@/components/Layout";
 import VoiceAssistant from "@/components/VoiceAssistant";
@@ -40,6 +41,17 @@ import CollectionEntry from "./pages/CollectionEntry";
 
 const queryClient = new QueryClient();
 
+const DashboardRedirect = () => {
+  const { userRole } = useAuth();
+  const isRestrictedAsstCFO = userRole?.startsWith('sub_cfo_') && userRole !== 'sub_cfo';
+  
+  if (isRestrictedAsstCFO) {
+    return <Navigate to="/book-section/file-tracking" replace />;
+  }
+  
+  return <Dashboard />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -61,7 +73,7 @@ const App = () => (
                         <Routes>
                           <Route path="/" element={
                             <ProtectedRoute>
-                              <Dashboard />
+                              <DashboardRedirect />
                             </ProtectedRoute>
                           } />
                           <Route path="/chart-of-accounts" element={<ChartOfAccounts />} />
