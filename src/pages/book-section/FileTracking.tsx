@@ -92,7 +92,7 @@ export default function FileTracking() {
   // New Form State
   const [isSavingForm, setIsSavingForm] = useState(false);
   const [formData, setFormData] = useState({
-    cfo_diary_number: `CFO-${new Date().getFullYear()}-${String(Math.floor(1 + Math.random() * 9999)).padStart(4, '0')}`,
+    cfo_diary_number: `CFO-${new Date().getFullYear()}-${String(Math.floor(10000 + Math.random() * 90000)).padStart(5, '0')}`,
     inward_date: new Date().toISOString().split('T')[0],
     received_from: "",
     receiving_number: `RC-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -115,6 +115,36 @@ export default function FileTracking() {
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
 
   const [records, setRecords] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchNextSequentialDiary = async () => {
+      if (isForwardingMode) return;
+      
+      try {
+        const currentYear = new Date().getFullYear();
+        const startOfYear = new Date(currentYear, 0, 1).toISOString();
+        
+        const { count, error } = await supabase
+          .from('file_tracking_records' as any)
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', startOfYear);
+          
+        if (!error && count !== null) {
+          const nextNum = count + 1;
+          setFormData(prev => ({
+            ...prev,
+            cfo_diary_number: `CFO-${currentYear}-${String(nextNum).padStart(5, '0')}`
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching sequential diary:", err);
+      }
+    };
+
+    if (activeTab === "register" && !isForwardingMode) {
+      fetchNextSequentialDiary();
+    }
+  }, [activeTab, isForwardingMode]);
 
   // Helper for CSV Export
   const exportToCSV = (data: any[], filename: string) => {
@@ -335,7 +365,7 @@ export default function FileTracking() {
 
   const handleFormReset = () => {
     setFormData({
-      cfo_diary_number: `CFO-${new Date().getFullYear()}-${String(Math.floor(1 + Math.random() * 9999)).padStart(4, '0')}`,
+      cfo_diary_number: `CFO-${new Date().getFullYear()}-${String(Math.floor(10000 + Math.random() * 90000)).padStart(5, '0')}`,
       inward_date: new Date().toISOString().split('T')[0],
       received_from: "",
       receiving_number: `RC-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -418,6 +448,19 @@ export default function FileTracking() {
         // Creating fresh record
         if (existingRecord) {
           toast.error("This Receiving Number already exists! Please use a unique number for new registration.");
+          setIsSavingForm(false);
+          return;
+        }
+
+        // Check for duplicate CFO Diary Number
+        const { data: duplicateDiary } = await supabase
+          .from('file_tracking_records' as any)
+          .select('id')
+          .eq('cfo_diary_number', formData.cfo_diary_number)
+          .maybeSingle();
+
+        if (duplicateDiary) {
+          toast.error("CFO Diary Number already exists! Please click reset to generate a new one or enter manually.");
           setIsSavingForm(false);
           return;
         }

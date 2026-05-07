@@ -149,6 +149,28 @@ export default function BillDispatch() {
     }
   }, []);
 
+  useEffect(() => {
+    const fetchNextDiaryNo = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('bill_dispatch' as any)
+          .select('*', { count: 'exact', head: true });
+        
+        if (!error && count !== null) {
+          const nextNum = count + 1;
+          setFormData(prev => ({
+            ...prev,
+            diaryNo: `D-${String(nextNum).padStart(5, '0')}`
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching next diary no:", err);
+      }
+    };
+
+    fetchNextDiaryNo();
+  }, []);
+
   const handleSave = async () => {
     if (!formData.partyName || !formData.subject) {
       toast.error("Please fill required fields (Party Name & Subject)");
@@ -181,7 +203,7 @@ export default function BillDispatch() {
       const trackingId = `FL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const newEntry = {
-        diary_no: formData.diaryNo || `D-${Math.floor(Math.random() * 10000)}`,
+        diary_no: formData.diaryNo || `D-${Math.floor(10000 + Math.random() * 90000)}`,
         tracking_id: trackingId,
         received_date: formData.receivedDate,
         party_name: formData.partyName,
@@ -207,7 +229,7 @@ export default function BillDispatch() {
       handleReset();
       fetchEntries();
     } catch (err: any) {
-      const mockEntry = { ...formData, id: Date.now(), status: 'pending', scan_url: photo, diary_no: formData.diaryNo || `D-${Math.floor(Math.random() * 10000)}` };
+      const mockEntry = { ...formData, id: Date.now(), status: 'pending', scan_url: photo, diary_no: formData.diaryNo || `D-${Math.floor(10000 + Math.random() * 90000)}` };
       setDiaryEntries([mockEntry, ...diaryEntries]);
       toast.info("Digitized locally (Database restricted)");
       handleReset();
